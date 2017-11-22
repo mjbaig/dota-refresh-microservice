@@ -1,20 +1,18 @@
 'use strict'
 
 const request = require('request-promise');
+const matchHistoryModel = require('../models/save-match-history');
 
 async function getMyMatchHistory(apiKey, databaseObject, logger){
     var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id=76561198180349542");
     var matchHistoryData = JSON.parse(matchHistoryString);
-    matchHistoryData.result['matches'].forEach(function(match){
-        console.log({
-            match_id : match['match_id'],
-            match_seq_num : match['match_seq_num'],
-            start_time: match['start_time'],
-            lobby_type: match['lobby_type'],
-            radiant_team_id : match['radiant_team_id'],
-            dire_team_id : match['dire_team_id'],
-        });
-    });
+    console.log(matchHistoryModel.formatDataForUpload(matchHistoryData));
+    return matchHistoryData;
+}
+
+async function saveMyMatchHistory(apiKey, databaseObject, logger){
+    var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id=76561198180349542");
+    var matchHistoryData = JSON.parse(matchHistoryString);
     return matchHistoryData;
 }
 

@@ -17,7 +17,10 @@
   },
   "homepage": "https://github.com/mjbaig/dota-refresh-microservice#readme",
   "dependencies": {
+    "pg": "^7.4.0",
     "request": "^2.83.0",
-    "request-promise": "^4.2.2"
+    "request-promise": "^4.2.2",
+    "sequelize": "^4.22.12",
+    "winston": "^2.4.0"
   }
 }
