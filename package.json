@@ -1,0 +1,19 @@
+{
+  "name": "dota-refresh-microservice",
+  "version": "1.0.0",
+  "description": "A microservice to retrieve match data",
+  "main": "index.js",
+  "scripts": {
+    "test": "node index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mjbaig/dota-refresh-microservice.git"
+  },
+  "author": "Maz Baig",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mjbaig/dota-refresh-microservice/issues"
+  },
+  "homepage": "https://github.com/mjbaig/dota-refresh-microservice#readme"
+}
