@@ -15,5 +15,9 @@
   "bugs": {
     "url": "https://github.com/mjbaig/dota-refresh-microservice/issues"
   },
-  "homepage": "https://github.com/mjbaig/dota-refresh-microservice#readme"
+  "homepage": "https://github.com/mjbaig/dota-refresh-microservice#readme",
+  "dependencies": {
+    "request": "^2.83.0",
+    "request-promise": "^4.2.2"
+  }
 }
