@@ -1,19 +1,12 @@
 'use strict'
 
 const request = require('request-promise');
-//const matchHistoryModel = require('../models/save-match-history');
-
-async function getMyMatchHistory(apiKey, databaseObject, logger){
-    var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id=76561198180349542");
-    var matchHistoryData = JSON.parse(matchHistoryString);
-    //console.log(matchHistoryModel.formatDataForUpload(matchHistoryData));
-    return matchHistoryData;
-}
+const matchHistoryModel = require('../models/save-match-history');
 
 async function saveMyMatchHistory(apiKey, databaseObject, logger){
     var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id=76561198180349542");
     var matchHistoryData = JSON.parse(matchHistoryString);
-    return matchHistoryData;
+    return matchHistoryModel.save(matchHistoryData);
 }
 
 async function getMyMatchDetails(matchId, apiKey, databaseObject, logger){
@@ -97,6 +90,6 @@ async function getMyMatchDetails(matchId, apiKey, databaseObject, logger){
 }
 
 module.exports = {
-    getMyMatchHistory:getMyMatchHistory,
+    saveMyMatchHistory:saveMyMatchHistory,
     getMyMatchDetails:getMyMatchDetails
 }
