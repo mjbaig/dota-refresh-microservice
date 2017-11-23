@@ -1,12 +1,12 @@
 'use strict'
 
 const request = require('request-promise');
-const matchHistoryModel = require('../models/save-match-history');
+//const matchHistoryModel = require('../models/save-match-history');
 
 async function getMyMatchHistory(apiKey, databaseObject, logger){
     var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id=76561198180349542");
     var matchHistoryData = JSON.parse(matchHistoryString);
-    console.log(matchHistoryModel.formatDataForUpload(matchHistoryData));
+    //console.log(matchHistoryModel.formatDataForUpload(matchHistoryData));
     return matchHistoryData;
 }
 

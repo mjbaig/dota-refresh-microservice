@@ -32,4 +32,4 @@ function getDatabase(){
     return sequelize
 }
 
-module.exports = {getDatabase: getDatabase}
+module.exports = getDatabase()

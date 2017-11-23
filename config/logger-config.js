@@ -12,4 +12,4 @@ function getLogger(){
 
 }
 
-module.exports = {getLogger:getLogger}
+module.exports = getLogger();
