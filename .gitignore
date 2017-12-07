@@ -1,3 +1,4 @@
 node_modules
 ./node_modules
 somefile.log
+undefinedsomefile.log

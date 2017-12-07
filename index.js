@@ -15,7 +15,7 @@ async function main(){
     try{
         var data = await matchHistoryRefresh.saveMyMatchHistory(apiKey, database, logger);
     }catch(error){
-        logger.exception(error);
+        logger.error(error);
     }
     
     logger.info(data);

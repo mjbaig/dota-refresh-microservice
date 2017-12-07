@@ -1,35 +1,13 @@
-const Sequelize = require('sequelize');
+const pg = require('pg');
 
 const databaseType = 'postgres';
 const host = process.env.POSTGRES_HOST;
 const user = process.env.POSTGRES_USER;
 const password = process.env.POSTGRES_PASSWORD;
 const databaseName = process.env.POSTGRES_DATABASE_NAME;
+const connectionString = "postgres://"+user+ ":"+password+"@"+host+"/"+databaseName
 
-function getDatabase(){
-    
-    const sequelize = new Sequelize(databaseName, user, password,{
-        host: host,
-        dialect: databaseType,
-        pool:{
-            max: 5,
-            min: 0,
-            acquire: 30000,
-            idle: 10000
-        },
-        operatorsAliases: false
-    });
-    
-    sequelize
-    .authenticate()
-    .then(() => {
-      console.log('Connection has been established successfully.');
-    })
-    .catch(err => {
-      console.error('Unable to connect to the database:', err);
-    });
+var client = new pg.Client(connectionString)
+client.connect();
 
-    return sequelize
-}
-
-module.exports = getDatabase()
+module.exports = client;
