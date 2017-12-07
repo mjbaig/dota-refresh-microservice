@@ -5,11 +5,12 @@ const matchResultsAccessor = require('../data-access/access-match-results');
 const playersOfInterestAccessor = require('../data-access/access-players-of-interest');
 const logger = require('../../config/logger-config');
 
-async function refreshPlayerData(){
+async function refreshPlayerData(apiKey){
     try{
-        var playerData = await playersOfInterestAccessor.getPlayersOfInterestData();
-        playerData.forEach((data) => {
-            console.log(data);
+        var playerTable = await playersOfInterestAccessor.getPlayersOfInterestData();
+        playerTable.forEach(async (playerRow) => {
+            //Timer is required because valve only wants one request per second.
+            setTimeout(await saveMyMatchHistory(apiKey,playerRow['player_id']),1000);
         });
         logger.info("Data Refresh Seems to be a success.");
     }catch(exception){

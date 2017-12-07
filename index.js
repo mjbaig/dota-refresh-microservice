@@ -14,7 +14,7 @@ async function main(){
 
     try{
         //var data = await matchHistoryRefresh.saveMyMatchHistory(apiKey, 220083814);
-        var data = await matchHistoryRefresh.refreshPlayerData();
+        var data = await matchHistoryRefresh.refreshPlayerData(apiKey);
     }catch(error){
         logger.error(error);
     }
