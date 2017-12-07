@@ -13,7 +13,8 @@ async function main(){
     await configuration();
 
     try{
-        var data = await matchHistoryRefresh.saveMyMatchHistory(apiKey, database, logger);
+        //var data = await matchHistoryRefresh.saveMyMatchHistory(apiKey, 220083814);
+        var data = await matchHistoryRefresh.refreshPlayerData();
     }catch(error){
         logger.error(error);
     }

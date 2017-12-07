@@ -1,10 +1,26 @@
 'use strict'
 const request = require('request-promise');
-const matchHistorySaver = require('../data-access/access-match-history');
-const matchResultsSaver = require('../data-access/access-match-results');
+const matchHistoryAccessor = require('../data-access/access-match-history');
+const matchResultsAccessor = require('../data-access/access-match-results');
+const playersOfInterestAccessor = require('../data-access/access-players-of-interest');
+const logger = require('../../config/logger-config');
 
-async function saveMyMatchHistory(apiKey, databaseObject, logger){
-    var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id=220083814");
+async function refreshPlayerData(){
+    try{
+        var playerData = await playersOfInterestAccessor.getPlayersOfInterestData();
+        playerData.forEach((data) => {
+            console.log(data);
+        });
+        logger.info("Data Refresh Seems to be a success.");
+    }catch(exception){
+        logger.info("Something went wrong while tyring to refresh the player data")
+        logger.error(exception);
+    }
+
+}
+
+async function saveMyMatchHistory(apiKey,playerId){
+    var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id="+playerId);
     var matchHistoryData = JSON.parse(matchHistoryString);
     matchHistoryData.result['matches'].forEach(function(match){
         var formattedData = {
@@ -15,7 +31,7 @@ async function saveMyMatchHistory(apiKey, databaseObject, logger){
             radiant_team_id : match['radiant_team_id'],
             dire_team_id : match['dire_team_id'],
         }
-        matchHistorySaver.save(formattedData);
+        matchHistoryAccessor.save(formattedData);
     });
 }
 
@@ -101,5 +117,6 @@ async function getMyMatchDetails(matchId, apiKey, databaseObject, logger){
 
 module.exports = {
     saveMyMatchHistory:saveMyMatchHistory,
-    getMyMatchDetails:getMyMatchDetails
+    getMyMatchDetails:getMyMatchDetails,
+    refreshPlayerData: refreshPlayerData
 }
