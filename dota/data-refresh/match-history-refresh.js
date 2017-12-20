@@ -1,26 +1,78 @@
 'use strict'
+const logger = require('../../config/logger-config');
 const request = require('request-promise');
 const matchHistoryAccessor = require('../data-access/access-match-history');
 const matchResultsAccessor = require('../data-access/access-match-results');
+const playerStatsAccessor = require('../data-access/access-player-stats');
 const playersOfInterestAccessor = require('../data-access/access-players-of-interest');
-const logger = require('../../config/logger-config');
+const util = require('util');
+const sleep = util.promisify(setTimeout);
 
+/**
+ * 
+ * This is function kicks off the process of aquiring the api data and storing it into the database.
+ * 
+ * @param apiKey is the steam API key required to access the dota match history api API
+ */
 async function refreshPlayerData(apiKey){
     try{
-        var playerTable = await playersOfInterestAccessor.getPlayersOfInterestData();
-        playerTable.forEach(async (playerRow) => {
-            //Timer is required because valve only wants one request per second.
-            setTimeout(await saveMyMatchHistory(apiKey,playerRow['player_id']),1000);
-        });
+        await saveMatchDataForAllRegisteredPlayers(apiKey);
+        await saveMatchResultsForNewMatchIds(apiKey);
+
         logger.info("Data Refresh Seems to be a success.");
     }catch(exception){
+
         logger.info("Something went wrong while tyring to refresh the player data")
-        logger.error(exception);
+    
     }
 
 }
+ /**
+  * This function makes sure that the match results api is only queried for match_ids that exist in the match history table, but not in the match results table.
+  * 
+  * @param apiKey is the steam API key required to access the dota match history api API 
+  */
+async function saveMatchResultsForNewMatchIds(apiKey){
+        var unupdatedMatchIds = await playersOfInterestAccessor.matchIdDiscrepancy();
+        try{
+            for(var index = 0; index < unupdatedMatchIds.length - 1; index++){
+                var matchId = unupdatedMatchIds[index]['match_id'];
+                //Valve requires that the users of this api limit themselves to 1 request per second, so I had to artificially slow down the calls.
+                await sleep(1000);
+                var matchDetailsData = await getMatchDetails(apiKey, matchId);
+                //saveMatchResults(matchDetailsData);
+                savePlayerStats(matchDetailsData);
+            }
+        }catch(exception){
+            logger.error("Error saving match results ahnd player stats");
+        }
+        
+}
 
-async function saveMyMatchHistory(apiKey,playerId){
+/**
+ * Gets the last 100 matches for each player registered in my database and saves them to the database
+ * @param apiKey is the steam API key required to access the dota match history api API 
+ */
+async function saveMatchDataForAllRegisteredPlayers(apiKey){
+    try{
+        var playerTable = await playersOfInterestAccessor.getPlayersOfInterestData();
+        for(index = 0; index < playerTable.length; index++){
+            await sleep(1000);
+            await saveMatchHistory(apiKey,playerRow['player_id']);
+        }
+
+    }catch(exception){
+        logger.error(exception);
+    }
+}
+
+
+/**
+ * 
+ * @param apiKey is the steam API key required to access the dota match history api API
+ * @param playerId the ID unique to each DOTA 2 player. Players that have chosen to keep their stats private will show up with this ID: 4294967295
+ */
+async function saveMatchHistory(apiKey,playerId){
     var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id="+playerId);
     var matchHistoryData = JSON.parse(matchHistoryString);
     matchHistoryData.result['matches'].forEach(function(match){
@@ -34,17 +86,43 @@ async function saveMyMatchHistory(apiKey,playerId){
         }
         matchHistoryAccessor.save(formattedData);
     });
+    logger.info("Saved Match History")
 }
 
-async function getMyMatchDetails(matchId, apiKey, databaseObject, logger){
-    var matchDetailsString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/V001/?match_id="+matchId+"&key="+apiKey);
-    var matchDetailsData = JSON.parse(matchDetailsString).result;
-    
+/**
+ * 
+ * This function queries the match details api and returns the data.
+ * 
+ * @param apiKey is the steam API key required to access the dota match history api API 
+ * @param matchId Is the ID given to each individual dota 2 match.
+ */
+async function getMatchDetails(apiKey, matchId){
+    try{
+        console.log("https://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/V001/?match_id="+matchId+"&key="+apiKey)
+        var matchDetailsString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/V001/?match_id="+matchId+"&key="+apiKey);
+        var matchDetailsData = JSON.parse(matchDetailsString).result;
+    }catch(exception){
+        logger.error(exception);
+    }
+
+
+    return matchDetailsData;
+}
+
+/**
+ * 
+ * This function transforms the data from the match details api and saves it into the match results table
+ * 
+ * @param matchDetailsData The data that this function transforms and saves into the database
+ */
+async function saveMatchResults(matchDetailsData){
+
     //Match Results Schema
     var playerIds = [];
     matchDetailsData['players'].forEach(function(playersObject){
         playerIds.push(playersObject.account_id);
     });
+
     var matchResults = {
         players :playerIds,
         radiant_win: matchDetailsData.radiant_win,
@@ -70,54 +148,56 @@ async function getMyMatchDetails(matchId, apiKey, databaseObject, logger){
         radiant_score: matchDetailsData.radiant_score,
         dire_score: matchDetailsData.dire_score
     };
+    matchResultsAccessor.save(matchResults);
 
+}
+
+async function savePlayerStats(matchDetailsData){
+    var playerTable = await playersOfInterestAccessor.getPlayersOfInterestData();
     //Player Stats Schema
     var playerStatsArray = [];
     matchDetailsData['players'].forEach(function(playersObject){
-        var playerStats = {
-            match_id: matchId,
-            account_id :playersObject.account_id,
-            player_slot :playersObject.account_id,
-            hero_id :playersObject.account_id,
-            item_0 :playersObject.account_id,
-            item_1 :playersObject.account_id,
-            item_2 :playersObject.account_id,
-            item_3 :playersObject.account_id,
-            item_4 :playersObject.account_id,
-            item_5 :playersObject.account_id,
-            backpack_0 :playersObject.account_id,
-            backpack_1 :playersObject.account_id,
-            backpack_2 :playersObject.account_id,
-            kills :playersObject.account_id,
-            deaths :playersObject.account_id,
-            assists :playersObject.account_id,
-            leaver_status :playersObject.account_id,
-            last_hits :playersObject.account_id,
-            denies :playersObject.account_id,
-            gold_per_min :playersObject.account_id,
-            xp_per_min :playersObject.account_id,
-            level :playersObject.account_id,
-            hero_damage :playersObject.account_id,
-            tower_damage :playersObject.account_id,
-            hero_healing :playersObject.account_id,
-            gold :playersObject.account_id,
-            gold_spent :playersObject.account_id,
-            scaled_hero_damage :playersObject.account_id,
-            scaled_tower_damage :playersObject.account_id,
-            scaled_hero_healing :playersObject.account_id,
-            ability_upgrades :playersObject.ability_upgrades
-        };
-        playerStatsArray.push(playerStats);
+        if(playersObject.account_id != 4294967295){
+            var playerStats = {
+                match_id: matchDetailsData.match_id,
+                account_id :playersObject.account_id,
+                player_slot :playersObject.player_slot,
+                hero_id :playersObject.hero_id,
+                item_0 :playersObject.item_0,
+                item_1 :playersObject.item_1,
+                item_2 :playersObject.item_2,
+                item_3 :playersObject.item_3,
+                item_4 :playersObject.item_4,
+                item_5 :playersObject.item_5,
+                backpack_0 :playersObject.backpack_0,
+                backpack_1 :playersObject.backpack_1,
+                backpack_2 :playersObject.backpack_2,
+                kills :playersObject.kills,
+                deaths :playersObject.deaths,
+                assists :playersObject.assists,
+                leaver_status :playersObject.leaver_status,
+                last_hits :playersObject.last_hits,
+                denies :playersObject.denies,
+                gold_per_min :playersObject.gold_per_min,
+                xp_per_min :playersObject.xp_per_min,
+                level :playersObject.level,
+                hero_damage :playersObject.hero_damage,
+                tower_damage :playersObject.tower_damage,
+                hero_healing :playersObject.hero_healing,
+                gold :playersObject.gold,
+                gold_spent :playersObject.gold_spent,
+                scaled_hero_damage :playersObject.scaled_hero_damage,
+                scaled_tower_damage :playersObject.scaled_tower_damage,
+                scaled_hero_healing :playersObject.scaled_hero_healing,
+                ability_upgrades :playersObject.ability_upgrades
+            };
+            playerStatsAccessor.save(playerStats);
+        }
+
     });
 
-
-    console.log(playerStatsArray);
-
-    return matchDetailsData; 
 }
 
 module.exports = {
-    saveMyMatchHistory:saveMyMatchHistory,
-    getMyMatchDetails:getMyMatchDetails,
     refreshPlayerData: refreshPlayerData
 }
