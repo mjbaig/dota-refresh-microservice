@@ -56,7 +56,8 @@ async function saveMatchResultsForNewMatchIds(apiKey){
 async function saveMatchDataForAllRegisteredPlayers(apiKey){
     try{
         var playerTable = await playersOfInterestAccessor.getPlayersOfInterestData();
-        for(index = 0; index < playerTable.length; index++){
+        for(var index = 0; index < playerTable.length; index++){
+            var playerRow = playerTable[index];
             await sleep(1000);
             await saveMatchHistory(apiKey,playerRow['player_id']);
         }
@@ -152,12 +153,20 @@ async function saveMatchResults(matchDetailsData){
 
 }
 
+/**
+ * 
+ * This function transforms the data from the match details api and saves it into the player stats table.
+ * This function should only run for players that have been registered in my database.
+ * 
+ * @param matchDetailsData The data that this function transforms and saves into the database
+ */
 async function savePlayerStats(matchDetailsData){
-    var playerTable = await playersOfInterestAccessor.getPlayersOfInterestData();
+    var playerMap = await playersOfInterestAccessor.getPlayersOfInterestMap();
     //Player Stats Schema
     var playerStatsArray = [];
     matchDetailsData['players'].forEach(function(playersObject){
-        if(playersObject.account_id != 4294967295){
+        console.log(playerMap)
+        if(playersObject['account_id'] != 4294967295 && !!playerMap[playersObject['account_id']]){
             var playerStats = {
                 match_id: matchDetailsData.match_id,
                 account_id :playersObject.account_id,

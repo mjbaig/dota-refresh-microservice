@@ -36,4 +36,21 @@ async function getPlayersOfInterestData(){
     return playersOfInterestData.rows;
 }
 
-module.exports = {getPlayersOfInterestData: getPlayersOfInterestData,matchIdDiscrepancy:matchIdDiscrepancy};
+async function getPlayersOfInterestMap(){
+    try{
+        var playersOfInterestArray = await getPlayersOfInterestData();
+        var playersOfInterestMap = {};
+        playersOfInterestArray.forEach(function(playerData){
+            playersOfInterestMap[playerData['player_id']] = playerData;
+        });
+        return playersOfInterestMap;
+    }catch(error){
+        logger.error(error);
+    }
+}
+
+module.exports = {
+                    getPlayersOfInterestData: getPlayersOfInterestData,
+                    matchIdDiscrepancy: matchIdDiscrepancy,
+                    getPlayersOfInterestMap: getPlayersOfInterestMap
+                };
