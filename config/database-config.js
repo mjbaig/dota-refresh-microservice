@@ -1,4 +1,5 @@
 const pg = require('pg');
+const logger = require('./logger-config');
 
 const databaseType = 'postgres';
 const host = process.env.POSTGRES_HOST;
@@ -8,6 +9,11 @@ const databaseName = process.env.POSTGRES_DATABASE_NAME;
 const connectionString = "postgres://"+user+ ":"+password+"@"+host+"/"+databaseName
 
 var client = new pg.Client(connectionString)
-client.connect();
+try{
+    client.connect();
+}catch(error){
+    logger.error("Could not connect to database");
+}
+
 
 module.exports = client;
