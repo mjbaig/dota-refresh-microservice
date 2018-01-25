@@ -1,5 +1,5 @@
 const pg = require('pg');
-const logger = require('./logger-config');
+const logger = require('./logger-config')(__filename);
 
 const databaseType = 'postgres';
 const host = process.env.POSTGRES_HOST;
@@ -13,6 +13,7 @@ try{
     client.connect();
 }catch(error){
     logger.error("Could not connect to database");
+    return cb(exception);
 }
 
 

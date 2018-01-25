@@ -1,5 +1,5 @@
 'use strict'
-const logger = require('../../config/logger-config');
+const logger = require('../../config/logger-config')(__filename);
 const request = require('request-promise');
 const matchHistoryAccessor = require('../data-access/access-match-history');
 const matchResultsAccessor = require('../data-access/access-match-results');
@@ -16,14 +16,16 @@ const sleep = util.promisify(setTimeout);
  */
 async function refreshPlayerData(apiKey){
     try{
+        logger.info("Refreshing Match Data");
         await saveMatchDataForAllRegisteredPlayers(apiKey);
+        logger.info("Refreshing Match Results")
         await saveMatchResultsForNewMatchIds(apiKey);
 
         logger.info("Data Refresh Seems to be a success.");
     }catch(exception){
 
         logger.info("Something went wrong while tyring to refresh the player data")
-    
+        return cb(exception);
     }
 
 }
@@ -33,18 +35,21 @@ async function refreshPlayerData(apiKey){
   * @param apiKey is the steam API key required to access the dota match history api API 
   */
 async function saveMatchResultsForNewMatchIds(apiKey){
-        var unupdatedMatchIds = await playersOfInterestAccessor.matchIdDiscrepancy();
         try{
+            logger.info("Getting Match ID Discrepancies");
+            var unupdatedMatchIds = await playersOfInterestAccessor.matchIdDiscrepancy();
+            logger.info("The Discrepancies are: "+ unupdatedMatchIds);
             for(var index = 0; index < unupdatedMatchIds.length - 1; index++){
                 var matchId = unupdatedMatchIds[index]['match_id'];
                 //Valve requires that the users of this api limit themselves to 1 request per second, so I had to artificially slow down the calls.
                 await sleep(1000);
                 var matchDetailsData = await getMatchDetails(apiKey, matchId);
-                //saveMatchResults(matchDetailsData);
+                saveMatchResults(matchDetailsData);
                 savePlayerStats(matchDetailsData);
             }
         }catch(exception){
             logger.error("Error saving match results ahnd player stats");
+            return cb(exception);
         }
         
 }
@@ -64,6 +69,7 @@ async function saveMatchDataForAllRegisteredPlayers(apiKey){
 
     }catch(exception){
         logger.error(exception);
+        return cb(exception);
     }
 }
 
@@ -74,20 +80,25 @@ async function saveMatchDataForAllRegisteredPlayers(apiKey){
  * @param playerId the ID unique to each DOTA 2 player. Players that have chosen to keep their stats private will show up with this ID: 4294967295
  */
 async function saveMatchHistory(apiKey,playerId){
-    var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id="+playerId);
-    var matchHistoryData = JSON.parse(matchHistoryString);
-    matchHistoryData.result['matches'].forEach(function(match){
-        var formattedData = {
-            match_id : match['match_id'],
-            match_seq_num : match['match_seq_num'],
-            start_time: match['start_time'],
-            lobby_type: match['lobby_type'],
-            radiant_team_id : match['radiant_team_id'],
-            dire_team_id : match['dire_team_id'],
-        }
-        matchHistoryAccessor.save(formattedData);
-    });
-    logger.info("Saved Match History")
+    try{
+        var matchHistoryString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchHistory/V001/?key="+apiKey+"&account_id="+playerId);
+        var matchHistoryData = JSON.parse(matchHistoryString);
+        matchHistoryData.result['matches'].forEach(function(match){
+            var formattedData = {
+                match_id : match['match_id'],
+                match_seq_num : match['match_seq_num'],
+                start_time: match['start_time'],
+                lobby_type: match['lobby_type'],
+                radiant_team_id : match['radiant_team_id'],
+                dire_team_id : match['dire_team_id'],
+            }
+            matchHistoryAccessor.save(formattedData);
+        });
+        logger.info("Saved Match History");
+    }catch(exception){
+        logger.error("Failed to save match history");
+        return cb(exception);
+    }
 }
 
 /**
@@ -102,12 +113,11 @@ async function getMatchDetails(apiKey, matchId){
         console.log("https://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/V001/?match_id="+matchId+"&key="+apiKey)
         var matchDetailsString = await request("https://api.steampowered.com/IDOTA2Match_570/GetMatchDetails/V001/?match_id="+matchId+"&key="+apiKey);
         var matchDetailsData = JSON.parse(matchDetailsString).result;
+        return matchDetailsData;
     }catch(exception){
         logger.error(exception);
+        return cb(exception);
     }
-
-
-    return matchDetailsData;
 }
 
 /**
@@ -149,7 +159,13 @@ async function saveMatchResults(matchDetailsData){
         radiant_score: matchDetailsData.radiant_score,
         dire_score: matchDetailsData.dire_score
     };
-    matchResultsAccessor.save(matchResults);
+    try{
+        matchResultsAccessor.save(matchResults);
+    }catch(error){
+        logger.error(error);
+        return cb(exception);
+    }
+    
 
 }
 
@@ -161,7 +177,12 @@ async function saveMatchResults(matchDetailsData){
  * @param matchDetailsData The data that this function transforms and saves into the database
  */
 async function savePlayerStats(matchDetailsData){
-    var playerMap = await playersOfInterestAccessor.getPlayersOfInterestMap();
+    try{
+        var playerMap = await playersOfInterestAccessor.getPlayersOfInterestMap();
+    }catch(error){
+        logger.error(error);
+        return cb(exception);
+    }
     //Player Stats Schema
     var playerStatsArray = [];
     matchDetailsData['players'].forEach(function(playersObject){
@@ -200,7 +221,12 @@ async function savePlayerStats(matchDetailsData){
                 scaled_hero_healing :playersObject.scaled_hero_healing,
                 ability_upgrades :playersObject.ability_upgrades
             };
-            playerStatsAccessor.save(playerStats);
+            try{
+                playerStatsAccessor.save(playerStats);
+            }catch(error){
+                logger.error(error);
+                return cb(exception);
+            }
         }
 
     });

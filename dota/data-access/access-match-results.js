@@ -1,7 +1,7 @@
 'use strict'
 
 const client = require('../../config/database-config');
-const logger = require('../../config/logger-config')
+const logger = require('../../config/logger-config')(__filename);
 const util = require('util');
 
 /**
@@ -13,7 +13,7 @@ const util = require('util');
 async function save(matchResultsData){
     var playersArrayString = matchResultsData.players.reduce(function(x,y){return x.toString()+","+y.toString()});
     var playersArrayString = '\'{'+playersArrayString+'}\'::BIGINT[]';
-    var query = util.format("select write_match_results(%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d);",
+    var query = util.format("select dota.write_match_results(%s,%s,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d);",
         playersArrayString,
         matchResultsData.radiant_win,
         matchResultsData.duration,
@@ -39,9 +39,11 @@ async function save(matchResultsData){
         matchResultsData.dire_score
     );
     try{
+        logger.info("Saving match results using this query: "+query);
         var status = await client.query(query);
     }catch(exception){
         logger.error(exception);
+        return cb(exception);
     }
 }
 

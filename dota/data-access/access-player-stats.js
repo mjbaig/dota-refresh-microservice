@@ -49,9 +49,11 @@ async function save(matchResultsData){
 
     );
     try{
+        logger.info("Saving player stats  using this query: "+query);
         var status = await client.query(query);
     }catch(exception){
         logger.error(exception);
+        return cb(exception);
     }
 }
 
